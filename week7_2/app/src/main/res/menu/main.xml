@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/cat"
+        android:orderInCategory="2"
+        android:title="Cat"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/dog"
+        android:orderInCategory="3"
+        android:title="Dog"
+        app:showAsAction="never" />
+
+    <item android:title="SubMenu">
+        <menu>
+            <item android:title="sub1"/>
+            <item android:title="sub2"/>
+        </menu>
+
+    </item>
+    <group android:checkableBehavior="single">
+        <item android:title="m1"/>
+        <item android:title="m2"/>
+        <item android:title="m3"/>
+    </group>
+</menu>
