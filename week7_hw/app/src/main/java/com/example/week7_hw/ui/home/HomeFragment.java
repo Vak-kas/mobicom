@@ -29,10 +29,8 @@ public class HomeFragment extends Fragment {
         webview.setWebViewClient(new WebViewClient());
         webview.getSettings().setJavaScriptEnabled(true);
 
-        // LiveData 관찰
-        homeViewModel.getText().observe(getViewLifecycleOwner(), newUrl -> {
-            webview.loadUrl(newUrl);
-        });
+        String str = homeViewModel.getText().getValue().toString();
+        webview.loadUrl(str);
 
         return root;
     }

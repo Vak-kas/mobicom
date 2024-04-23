@@ -4,6 +4,8 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
@@ -20,10 +22,10 @@ public class NotificationsFragment extends Fragment {
         binding = FragmentNotificationsBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
-        // LiveData 관찰하여 TextView 업데이트
-        notificationsViewModel.getText().observe(getViewLifecycleOwner(), newText -> {
-            binding.link.setText(newText);
-        });
+        TextView textView;
+        textView = binding.link;
+
+        notificationsViewModel.getText().observe(getViewLifecycleOwner(),textView::setText);
 
         return root;
     }
