@@ -43,20 +43,19 @@ public class MainActivity extends AppCompatActivity {
                 FragmentManager fragmentManager = getSupportFragmentManager();
                 Fragment currentFragment = fragmentManager.findFragmentById(R.id.nav_host_fragment_activity_main);
 
-                if (currentFragment != null && currentFragment.getView() != null) {
-                    MyGraphicView myGraphicView = currentFragment.getView().findViewById(R.id.myGraphicView);
+                MyGraphicView myGraphicView = currentFragment.getView().findViewById(R.id.myGraphicView);
 
-                    if (myGraphicView != null) {
-                        int itemId = item.getItemId();
-                        if (itemId == R.id.navigation_home) {
-                            myGraphicView.setShape(MyGraphicView.Shape.CIRCLE);
-                        } else if (itemId == R.id.navigation_dashboard) {
-                            myGraphicView.setShape(MyGraphicView.Shape.LINE);
-                        } else if (itemId == R.id.navigation_notifications) {
-                            myGraphicView.setShape(MyGraphicView.Shape.RECTANGLE);
-                        }
+                if (myGraphicView != null) {
+                    int itemId = item.getItemId();
+                    if (itemId == R.id.navigation_home) {
+                        myGraphicView.setShape(MyGraphicView.CIRCLE);
+                    } else if (itemId == R.id.navigation_dashboard) {
+                        myGraphicView.setShape(MyGraphicView.LINE);
+                    } else if (itemId == R.id.navigation_notifications) {
+                        myGraphicView.setShape(MyGraphicView.RECT);
                     }
                 }
+
                 return true;
             }
         });
@@ -69,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
             MyGraphicView myGraphicView = currentFragment.getView().findViewById(R.id.myGraphicView);
 
             if (myGraphicView != null) {
-                myGraphicView.setShape(MyGraphicView.Shape.CIRCLE);
+                myGraphicView.setShape(MyGraphicView.CIRCLE);
             }
         }
     }
