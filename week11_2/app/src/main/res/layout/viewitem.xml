@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:id="@+id/itemimageview"
+        android:src="@mipmap/ic_launcher"/>
+
+    <TextView
+        android:id="@+id/itemtextview"
+        android:layout_width="210dp"
+        android:layout_height="100dp"
+        android:gravity="center"
+        android:text="NAME" />
+
+    <Button
+        android:id="@+id/itembutton"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:text="button"/>
+
+
+
+</LinearLayout>
