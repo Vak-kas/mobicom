@@ -6,6 +6,7 @@ import android.os.Handler;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -24,6 +25,7 @@ public class MainActivity extends AppCompatActivity {
     private Button previousButton;
     private Button playPauseButton;
     private Button nextButton;
+    private ImageView songImageView;
 
     private MediaPlayer mediaPlayer;
     private List<Song> songList;
@@ -45,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
         previousButton = findViewById(R.id.previous);
         playPauseButton = findViewById(R.id.playPause);
         nextButton = findViewById(R.id.next);
+        songImageView = findViewById(R.id.image);
 
         // Sample song list
         songList = new ArrayList<>();
@@ -119,6 +122,11 @@ public class MainActivity extends AppCompatActivity {
         };
     }
 
+    private void updateSelection(int index) {
+        songListView.setItemChecked(index, true);
+        songListView.setSelection(index);
+    }
+
     private void playSong() {
         if (mediaPlayer != null) {
             mediaPlayer.release();
@@ -128,6 +136,7 @@ public class MainActivity extends AppCompatActivity {
         mediaPlayer.start();
         isPlaying = true;
         titleTextView.setText(songList.get(currentSongIndex).getTitle());
+        songImageView.setImageResource(songList.get(currentSongIndex).getImageResId());
 
         mediaPlayer.setOnCompletionListener(mp -> nextSong());
 
@@ -135,6 +144,7 @@ public class MainActivity extends AppCompatActivity {
         totalTimeTextView.setText(formatTime(mediaPlayer.getDuration()));
 
         handler.post(updateSeekBarRunnable);
+        updateSelection(currentSongIndex); // 현재 선택 항목 업데이트
     }
 
     private void pauseSong() {
