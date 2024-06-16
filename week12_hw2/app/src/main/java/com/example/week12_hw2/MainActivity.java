@@ -17,22 +17,22 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private ListView songListView;
-    private TextView titleTextView;
-    private TextView nowTimeTextView;
-    private TextView totalTimeTextView;
-    private SeekBar seekBar;
-    private Button previousButton;
-    private Button playPauseButton;
-    private Button nextButton;
-    private ImageView songImageView;
+    ListView songListView;
+    TextView titleTextView;
+    TextView nowTimeTextView;
+    TextView totalTimeTextView;
+    SeekBar seekBar;
+    Button previousButton;
+    Button playPauseButton;
+    Button nextButton;
+    ImageView songImageView;
 
-    private MediaPlayer mediaPlayer;
-    private List<Song> songList;
-    private int currentSongIndex = 0;
-    private boolean isPlaying = false;
-    private Handler handler = new Handler();
-    private Runnable updateSeekBarRunnable;
+    MediaPlayer mediaPlayer;
+    List<Song> songList;
+    int currentSongIndex = 0;
+    boolean isPlaying = false;
+    Handler handler = new Handler();
+    Runnable updateSeekBarRunnable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
