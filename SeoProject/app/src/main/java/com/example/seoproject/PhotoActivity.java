@@ -47,6 +47,7 @@ public class PhotoActivity extends AppCompatActivity implements TagAdapter.OnTag
     private long folderId;
     private boolean isShareMode = false;
     private String currentFilterMode = "MATCH_ALL";
+    private String currentSortMode = "newest";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,6 +62,7 @@ public class PhotoActivity extends AppCompatActivity implements TagAdapter.OnTag
         Button sharePhotoButton = findViewById(R.id.share_photo_button);
         Button filterButton = findViewById(R.id.filter_button);
         Button resetButton = findViewById(R.id.reset_button);
+        Button sortButton = findViewById(R.id.sort_button);
 
         dbHelper = new FolderDbHelper(this);
 
@@ -89,6 +91,7 @@ public class PhotoActivity extends AppCompatActivity implements TagAdapter.OnTag
 
         filterButton.setOnClickListener(v -> showFilterMenu(filterButton));
         resetButton.setOnClickListener(v -> resetFilters());
+        sortButton.setOnClickListener(v -> showSortMenu(sortButton));
     }
 
     @Override
@@ -123,6 +126,31 @@ public class PhotoActivity extends AppCompatActivity implements TagAdapter.OnTag
         }
     }
 
+    private void showSortMenu(View anchor) {
+        PopupMenu popupMenu = new PopupMenu(this, anchor);
+        popupMenu.getMenuInflater().inflate(R.menu.sort_menu, popupMenu.getMenu());
+        popupMenu.setOnMenuItemClickListener(this::onSortMenuItemClick);
+        popupMenu.show();
+    }
+
+    private boolean onSortMenuItemClick(MenuItem item) {
+        int itemId = item.getItemId();
+
+        if (itemId == R.id.action_sort_newest) {
+            currentSortMode = "newest";
+            ((Button) findViewById(R.id.sort_button)).setText("최신순");
+        } else if (itemId == R.id.action_sort_oldest) {
+            currentSortMode = "oldest";
+            ((Button) findViewById(R.id.sort_button)).setText("오래된순");
+        } else if (itemId == R.id.action_sort_most_shared) {
+            currentSortMode = "most_shared";
+            ((Button) findViewById(R.id.sort_button)).setText("최다공유수");
+        }
+        loadPhotosFromDatabase(folderNameTextView.getText().toString());
+        filterPhotosByTags();
+        return true;
+    }
+
     private void toggleShareMode() {
         isShareMode = !isShareMode;
         if (isShareMode) {
@@ -147,6 +175,7 @@ public class PhotoActivity extends AppCompatActivity implements TagAdapter.OnTag
             File file = new File(uri.getPath());
             Uri fileUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", file);
             fileUris.add(fileUri);
+            updateShareCountInDatabase(uri);  // 공유 횟수 업데이트
         }
 
         Intent shareIntent = new Intent(Intent.ACTION_SEND_MULTIPLE);
@@ -172,8 +201,9 @@ public class PhotoActivity extends AppCompatActivity implements TagAdapter.OnTag
         SQLiteDatabase db = dbHelper.getReadableDatabase();
         String selection = FolderDbHelper.PHOTO_COLUMN_FOLDER_ID + " = ?";
         String[] selectionArgs = { String.valueOf(folderId) };
+        String orderBy = getOrderByClause();
 
-        Cursor cursor = db.query(FolderDbHelper.PHOTO_TABLE_NAME, null, selection, selectionArgs, null, null, null);
+        Cursor cursor = db.query(FolderDbHelper.PHOTO_TABLE_NAME, null, selection, selectionArgs, null, null, orderBy);
         while (cursor.moveToNext()) {
             String imageUri = cursor.getString(cursor.getColumnIndexOrThrow(FolderDbHelper.PHOTO_COLUMN_IMAGE_URI));
             String tag1 = cursor.getString(cursor.getColumnIndexOrThrow(FolderDbHelper.PHOTO_COLUMN_TAG1));
@@ -198,6 +228,19 @@ public class PhotoActivity extends AppCompatActivity implements TagAdapter.OnTag
 
         tagAdapter.notifyDataSetChanged();
         photoAdapter.notifyDataSetChanged();
+    }
+
+    private String getOrderByClause() {
+        switch (currentSortMode) {
+            case "newest":
+                return FolderDbHelper.PHOTO_COLUMN_TIMESTAMP + " DESC";
+            case "oldest":
+                return FolderDbHelper.PHOTO_COLUMN_TIMESTAMP + " ASC";
+            case "most_shared":
+                return FolderDbHelper.PHOTO_COLUMN_SHARE_COUNT + " DESC";
+            default:
+                return FolderDbHelper.PHOTO_COLUMN_TIMESTAMP + " DESC";
+        }
     }
 
     private long getFolderIdByName(String folderName) {
@@ -324,7 +367,7 @@ public class PhotoActivity extends AppCompatActivity implements TagAdapter.OnTag
             photo.setTag3(tagEditText3.getText().toString().trim());
             updatePhotoTagsInDatabase(photo);
             loadPhotosFromDatabase(folderNameTextView.getText().toString());
-            photoAdapter.notifyItemChanged(position);
+            filterPhotosByTags();
         });
         builder.setNegativeButton("취소", (dialog, which) -> dialog.cancel());
 
@@ -350,9 +393,11 @@ public class PhotoActivity extends AppCompatActivity implements TagAdapter.OnTag
         builder.setMessage("사진을 삭제하시겠습니까?");
         builder.setPositiveButton("삭제", (dialog, which) -> {
             deletePhotoFromDatabase(photo);
-            loadPhotosFromDatabase(folderNameTextView.getText().toString()); // 사진 삭제 후 데이터베이스 다시 로드
-            filterPhotosByTags();
+            photoList.remove(position);
+            photoAdapter.notifyItemRemoved(position);
             Toast.makeText(this, "사진이 삭제되었습니다.", Toast.LENGTH_SHORT).show();
+            loadPhotosFromDatabase(folderNameTextView.getText().toString());
+            filterPhotosByTags();
         });
         builder.setNegativeButton("취소", (dialog, which) -> dialog.cancel());
 
@@ -364,5 +409,27 @@ public class PhotoActivity extends AppCompatActivity implements TagAdapter.OnTag
         String selection = FolderDbHelper.PHOTO_COLUMN_IMAGE_URI + " = ?";
         String[] selectionArgs = { photo.getImageUri() };
         db.delete(FolderDbHelper.PHOTO_TABLE_NAME, selection, selectionArgs);
+    }
+
+    private void updateShareCountInDatabase(Uri photoUri) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        String selection = FolderDbHelper.PHOTO_COLUMN_IMAGE_URI + " = ?";
+        String[] selectionArgs = { photoUri.getPath() };
+
+        Cursor cursor = db.query(FolderDbHelper.PHOTO_TABLE_NAME,
+                new String[]{FolderDbHelper.PHOTO_COLUMN_SHARE_COUNT},
+                selection, selectionArgs, null, null, null);
+
+        if (cursor != null && cursor.moveToFirst()) {
+            int currentShareCount = cursor.getInt(cursor.getColumnIndexOrThrow(FolderDbHelper.PHOTO_COLUMN_SHARE_COUNT));
+            cursor.close();
+
+            ContentValues values = new ContentValues();
+            values.put(FolderDbHelper.PHOTO_COLUMN_SHARE_COUNT, currentShareCount + 1);
+
+            db.update(FolderDbHelper.PHOTO_TABLE_NAME, values, selection, selectionArgs);
+        } else if (cursor != null) {
+            cursor.close();
+        }
     }
 }

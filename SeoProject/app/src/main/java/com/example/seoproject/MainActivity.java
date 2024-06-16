@@ -45,6 +45,7 @@ public class MainActivity extends AppCompatActivity implements PhotoAdapter.OnPh
         Button addFolderButton = findViewById(R.id.add_folder);
         Button deleteFolderButton = findViewById(R.id.delete_folder);
         Button searchButton = findViewById(R.id.search_button);
+        Button resetSearchButton = findViewById(R.id.reset_search_button);
 
         dbHelper = new FolderDbHelper(this);
         folderList = new ArrayList<>();
@@ -64,11 +65,13 @@ public class MainActivity extends AppCompatActivity implements PhotoAdapter.OnPh
         addFolderButton.setOnClickListener(v -> showAddFolderDialog());
         deleteFolderButton.setOnClickListener(v -> toggleDeleteMode());
         searchButton.setOnClickListener(v -> searchPhotos());
+        resetSearchButton.setOnClickListener(v -> resetSearch());
 
-        // Uncomment the following line to reset the database
+        // 데이터베이스 초기화
 //         resetDatabase();
     }
 
+    // 데이터베이스에서 폴더 목록을 로드
     private void loadFoldersFromDatabase() {
         folderList.clear();
         SQLiteDatabase db = dbHelper.getReadableDatabase();
@@ -81,6 +84,7 @@ public class MainActivity extends AppCompatActivity implements PhotoAdapter.OnPh
         folderAdapter.notifyDataSetChanged();
     }
 
+    // 폴더 추가 다이얼로그 표시
     private void showAddFolderDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("폴더명 입력");
@@ -105,6 +109,7 @@ public class MainActivity extends AppCompatActivity implements PhotoAdapter.OnPh
         builder.show();
     }
 
+    // 폴더 추가하기
     private void addFolder(String folderName) {
         if (!folderName.isEmpty() && !folderList.contains(folderName)) {
             SQLiteDatabase db = dbHelper.getWritableDatabase();
@@ -123,14 +128,16 @@ public class MainActivity extends AppCompatActivity implements PhotoAdapter.OnPh
         }
     }
 
+    // 삭제 모드
     private void toggleDeleteMode() {
         isDeleteMode = !isDeleteMode;
         folderAdapter.setShowRadioButton(isDeleteMode);
         if (!isDeleteMode) {
-            folderAdapter.setSelectedPosition(-1); // Reset selection
+            folderAdapter.setSelectedPosition(-1); // 선택 초기화
         }
     }
 
+    // 폴더 삭제하시겠습니까?
     private void showDeleteFolderDialog(String folderName) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("폴더 삭제");
@@ -152,22 +159,19 @@ public class MainActivity extends AppCompatActivity implements PhotoAdapter.OnPh
         builder.show();
     }
 
+    // 폴더 삭제, 내부 사진 포함 삭제
     private void deleteFolder(String folderName) {
         if (folderList.contains(folderName)) {
-            SQLiteDatabase db = dbHelper.getWritableDatabase();
-            int rowsDeleted = db.delete(FolderDbHelper.TABLE_NAME, FolderDbHelper.COLUMN_NAME + "=?", new String[]{folderName});
-            if (rowsDeleted > 0) {
-                folderList.remove(folderName);
-                folderAdapter.notifyDataSetChanged();
-                Toast.makeText(this, "폴더가 삭제되었습니다.", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "폴더 삭제에 실패했습니다.", Toast.LENGTH_SHORT).show();
-            }
+            dbHelper.deleteFolderAndPhotos(folderName);
+            folderList.remove(folderName);
+            folderAdapter.notifyDataSetChanged();
+            Toast.makeText(this, "폴더가 삭제되었습니다.", Toast.LENGTH_SHORT).show();
         } else {
             Toast.makeText(this, "존재하지 않는 폴더입니다.", Toast.LENGTH_SHORT).show();
         }
     }
 
+    // 폴더 클릭시
     private void onFolderClick(String folderName) {
         if (isDeleteMode) {
             showDeleteFolderDialog(folderName);
@@ -178,17 +182,20 @@ public class MainActivity extends AppCompatActivity implements PhotoAdapter.OnPh
         }
     }
 
+    // 데이터베이스 리셋
     private void resetDatabase() {
         dbHelper.resetDatabase();
         loadFoldersFromDatabase();
     }
 
+    // 삭제 모드 후 삭제 모드 종료
     private void exitDeleteMode() {
         isDeleteMode = false;
         folderAdapter.setShowRadioButton(false);
-        folderAdapter.setSelectedPosition(-1); // Reset selection
+        folderAdapter.setSelectedPosition(-1); // 선택 초기화
     }
 
+    // 사진 검색
     private void searchPhotos() {
         String searchText = searchBar.getText().toString().trim();
         searchResults.clear();
@@ -219,18 +226,32 @@ public class MainActivity extends AppCompatActivity implements PhotoAdapter.OnPh
         }
     }
 
+    // 검색 상태 초기화
+    private void resetSearch() {
+        searchBar.setText("");
+        searchResults.clear();
+        photoAdapter.notifyDataSetChanged();
+    }
+
+    // implements로 인하여 함수만 적고 미구현
     @Override
     public void onEditTags(Photo photo, int position) {
-        // MainActivity에서 태그 수정 기능을 사용할 필요가 없다면 구현하지 않습니다.
+        // Main에서는 수정 미구현
     }
 
+    // implements로 인하여 함수만 적고 미구현
     @Override
     public void onDeletePhoto(Photo photo, int position) {
-        // MainActivity에서 사진 삭제 기능을 사용할 필요가 없다면 구현하지 않습니다.
+        // Main에서는 삭제 미구현
     }
 
+    // 공유 기능, 공유횟수 업데이트
     @Override
     public void onSharePhoto(Uri photoUri) {
+        // 공유 횟수 업데이트
+        updateShareCountInDatabase(photoUri);
+
+        // 공유 인텐트 생성 및 실행
         File file = new File(photoUri.getPath());
         Uri fileUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", file);
 
@@ -239,5 +260,27 @@ public class MainActivity extends AppCompatActivity implements PhotoAdapter.OnPh
         shareIntent.putExtra(Intent.EXTRA_STREAM, fileUri);
         shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         startActivity(Intent.createChooser(shareIntent, "공유하기"));
+    }
+
+    // 데이터베이스에서 공유 횟수 업데이트
+    private void updateShareCountInDatabase(Uri photoUri) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+
+        // 현재 공유 횟수를 읽어오기
+        String[] projection = { FolderDbHelper.PHOTO_COLUMN_SHARE_COUNT };
+        String selection = FolderDbHelper.PHOTO_COLUMN_IMAGE_URI + " = ?";
+        String[] selectionArgs = { photoUri.toString() };
+        Cursor cursor = db.query(FolderDbHelper.PHOTO_TABLE_NAME, projection, selection, selectionArgs, null, null, null);
+
+        if (cursor != null && cursor.moveToFirst()) {
+            int currentShareCount = cursor.getInt(cursor.getColumnIndexOrThrow(FolderDbHelper.PHOTO_COLUMN_SHARE_COUNT));
+            cursor.close();
+
+            // 공유 횟수를 1 증가
+            ContentValues values = new ContentValues();
+            values.put(FolderDbHelper.PHOTO_COLUMN_SHARE_COUNT, currentShareCount + 1);
+
+            db.update(FolderDbHelper.PHOTO_TABLE_NAME, values, selection, selectionArgs);
+        }
     }
 }

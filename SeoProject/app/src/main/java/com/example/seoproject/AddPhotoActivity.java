@@ -112,13 +112,15 @@ public class AddPhotoActivity extends AppCompatActivity {
         values.put(FolderDbHelper.PHOTO_COLUMN_TAG2, tag2.isEmpty() ? null : tag2);
         values.put(FolderDbHelper.PHOTO_COLUMN_TAG3, tag3.isEmpty() ? null : tag3);
         values.put(FolderDbHelper.PHOTO_COLUMN_FOLDER_ID, folderId);
+        values.put(FolderDbHelper.PHOTO_COLUMN_TIMESTAMP, System.currentTimeMillis());  // 추가된 시간 저장
+        values.put(FolderDbHelper.PHOTO_COLUMN_SHARE_COUNT, 0);  // 공유 횟수 초기화
 
         long newRowId = db.insert(FolderDbHelper.PHOTO_TABLE_NAME, null, values);
 
         if (newRowId != -1) {
             Toast.makeText(this, "사진이 저장되었습니다.", Toast.LENGTH_SHORT).show();
-            setResult(RESULT_OK); // 추가된 부분
-            finish(); // 추가된 부분
+            setResult(RESULT_OK);  // 결과 코드 설정
+            finish();
         } else {
             Toast.makeText(this, "사진 저장에 실패했습니다.", Toast.LENGTH_SHORT).show();
         }
