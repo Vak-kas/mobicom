@@ -299,6 +299,11 @@ public class PhotoActivity extends AppCompatActivity implements TagAdapter.OnTag
         showDeletePhotoDialog(photo, position);
     }
 
+    @Override
+    public void onSharePhoto(Uri photoUri) {
+        // 빈 구현 추가
+    }
+
     private void showEditTagsDialog(Photo photo, int position) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("태그 수정");

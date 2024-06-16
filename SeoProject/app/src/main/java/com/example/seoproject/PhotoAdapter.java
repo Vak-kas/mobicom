@@ -20,6 +20,7 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.PhotoViewHol
     private List<Photo> photoList;
     private List<Uri> selectedPhotos;
     private OnPhotoActionListener listener;
+    private boolean isSearchMode = false;
 
     public PhotoAdapter(List<Photo> photoList, OnPhotoActionListener listener) {
         this.photoList = photoList;
@@ -61,7 +62,11 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.PhotoViewHol
 
     private void showPopupMenu(View view, Photo photo, int position) {
         PopupMenu popupMenu = new PopupMenu(view.getContext(), view);
-        popupMenu.inflate(R.menu.photo_popup_menu);
+        if (isSearchMode) {
+            popupMenu.inflate(R.menu.photo_search_popup_menu); // 검색 모드일 때 메뉴
+        } else {
+            popupMenu.inflate(R.menu.photo_popup_menu); // 기본 메뉴
+        }
 
         popupMenu.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == R.id.edit_tags) {
@@ -69,6 +74,9 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.PhotoViewHol
                 return true;
             } else if (item.getItemId() == R.id.delete_photo) {
                 listener.onDeletePhoto(photo, position);
+                return true;
+            } else if (item.getItemId() == R.id.share_photo) { // 공유하기 메뉴
+                listener.onSharePhoto(Uri.parse(photo.getImageUri()));
                 return true;
             } else {
                 return false;
@@ -97,6 +105,11 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.PhotoViewHol
         notifyDataSetChanged();
     }
 
+    public void setSearchMode(boolean searchMode) {
+        isSearchMode = searchMode;
+        notifyDataSetChanged();
+    }
+
     public static class PhotoViewHolder extends RecyclerView.ViewHolder {
         ImageView photoImageView;
         TextView photoTagsTextView;
@@ -113,5 +126,6 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.PhotoViewHol
     public interface OnPhotoActionListener {
         void onEditTags(Photo photo, int position);
         void onDeletePhoto(Photo photo, int position);
+        void onSharePhoto(Uri photoUri); // 공유하기 인터페이스 추가
     }
 }

@@ -5,6 +5,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -13,6 +14,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -20,12 +22,15 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements PhotoAdapter.OnPhotoActionListener {
 
     private EditText searchBar;
     private RecyclerView folderRecyclerView;
+    private RecyclerView searchRecyclerView;
     private FolderAdapter folderAdapter;
+    private PhotoAdapter photoAdapter;
     private List<String> folderList;
+    private List<Photo> searchResults;
     private FolderDbHelper dbHelper;
     private boolean isDeleteMode = false;
 
@@ -36,23 +41,32 @@ public class MainActivity extends AppCompatActivity {
 
         searchBar = findViewById(R.id.search_bar);
         folderRecyclerView = findViewById(R.id.folder_recycler_view);
+        searchRecyclerView = findViewById(R.id.search_result_recycler_view);
         Button addFolderButton = findViewById(R.id.add_folder);
         Button deleteFolderButton = findViewById(R.id.delete_folder);
+        Button searchButton = findViewById(R.id.search_button);
 
         dbHelper = new FolderDbHelper(this);
         folderList = new ArrayList<>();
+        searchResults = new ArrayList<>();
         folderAdapter = new FolderAdapter(folderList, this::onFolderClick);
+        photoAdapter = new PhotoAdapter(searchResults, this);
+        photoAdapter.setSearchMode(true); // 검색 모드 활성화
 
         folderRecyclerView.setLayoutManager(new GridLayoutManager(this, 3));
         folderRecyclerView.setAdapter(folderAdapter);
+
+        searchRecyclerView.setLayoutManager(new GridLayoutManager(this, 3));
+        searchRecyclerView.setAdapter(photoAdapter);
 
         loadFoldersFromDatabase();
 
         addFolderButton.setOnClickListener(v -> showAddFolderDialog());
         deleteFolderButton.setOnClickListener(v -> toggleDeleteMode());
+        searchButton.setOnClickListener(v -> searchPhotos());
 
         // Uncomment the following line to reset the database
-//         resetDatabase();
+        // resetDatabase();
     }
 
     private void loadFoldersFromDatabase() {
@@ -173,5 +187,57 @@ public class MainActivity extends AppCompatActivity {
         isDeleteMode = false;
         folderAdapter.setShowRadioButton(false);
         folderAdapter.setSelectedPosition(-1); // Reset selection
+    }
+
+    private void searchPhotos() {
+        String searchText = searchBar.getText().toString().trim();
+        searchResults.clear();
+
+        if (!searchText.isEmpty()) {
+            SQLiteDatabase db = dbHelper.getReadableDatabase();
+            String selection = FolderDbHelper.PHOTO_COLUMN_TAG1 + " LIKE ? OR " +
+                    FolderDbHelper.PHOTO_COLUMN_TAG2 + " LIKE ? OR " +
+                    FolderDbHelper.PHOTO_COLUMN_TAG3 + " LIKE ?";
+            String[] selectionArgs = new String[]{"%" + searchText + "%", "%" + searchText + "%", "%" + searchText + "%"};
+
+            Cursor cursor = db.query(FolderDbHelper.PHOTO_TABLE_NAME, null, selection, selectionArgs, null, null, null);
+            while (cursor.moveToNext()) {
+                String imageUri = cursor.getString(cursor.getColumnIndexOrThrow(FolderDbHelper.PHOTO_COLUMN_IMAGE_URI));
+                String tag1 = cursor.getString(cursor.getColumnIndexOrThrow(FolderDbHelper.PHOTO_COLUMN_TAG1));
+                String tag2 = cursor.getString(cursor.getColumnIndexOrThrow(FolderDbHelper.PHOTO_COLUMN_TAG2));
+                String tag3 = cursor.getString(cursor.getColumnIndexOrThrow(FolderDbHelper.PHOTO_COLUMN_TAG3));
+
+                searchResults.add(new Photo(imageUri, tag1, tag2, tag3));
+            }
+            cursor.close();
+
+            if (searchResults.isEmpty()) {
+                Toast.makeText(this, "검색 결과가 없습니다.", Toast.LENGTH_SHORT).show();
+            }
+
+            photoAdapter.notifyDataSetChanged();
+        }
+    }
+
+    @Override
+    public void onEditTags(Photo photo, int position) {
+        // MainActivity에서 태그 수정 기능을 사용할 필요가 없다면 구현하지 않습니다.
+    }
+
+    @Override
+    public void onDeletePhoto(Photo photo, int position) {
+        // MainActivity에서 사진 삭제 기능을 사용할 필요가 없다면 구현하지 않습니다.
+    }
+
+    @Override
+    public void onSharePhoto(Uri photoUri) {
+        File file = new File(photoUri.getPath());
+        Uri fileUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", file);
+
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("image/*");
+        shareIntent.putExtra(Intent.EXTRA_STREAM, fileUri);
+        shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivity(Intent.createChooser(shareIntent, "공유하기"));
     }
 }
