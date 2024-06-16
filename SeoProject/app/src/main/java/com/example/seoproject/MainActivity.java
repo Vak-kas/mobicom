@@ -66,7 +66,7 @@ public class MainActivity extends AppCompatActivity implements PhotoAdapter.OnPh
         searchButton.setOnClickListener(v -> searchPhotos());
 
         // Uncomment the following line to reset the database
-        // resetDatabase();
+//         resetDatabase();
     }
 
     private void loadFoldersFromDatabase() {

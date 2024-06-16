@@ -117,7 +117,8 @@ public class AddPhotoActivity extends AppCompatActivity {
 
         if (newRowId != -1) {
             Toast.makeText(this, "사진이 저장되었습니다.", Toast.LENGTH_SHORT).show();
-            finish();
+            setResult(RESULT_OK); // 추가된 부분
+            finish(); // 추가된 부분
         } else {
             Toast.makeText(this, "사진 저장에 실패했습니다.", Toast.LENGTH_SHORT).show();
         }

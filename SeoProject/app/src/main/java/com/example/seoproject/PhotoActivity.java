@@ -350,10 +350,9 @@ public class PhotoActivity extends AppCompatActivity implements TagAdapter.OnTag
         builder.setMessage("사진을 삭제하시겠습니까?");
         builder.setPositiveButton("삭제", (dialog, which) -> {
             deletePhotoFromDatabase(photo);
-            photoList.remove(position);
-            photoAdapter.notifyItemRemoved(position);
+            loadPhotosFromDatabase(folderNameTextView.getText().toString()); // 사진 삭제 후 데이터베이스 다시 로드
+            filterPhotosByTags();
             Toast.makeText(this, "사진이 삭제되었습니다.", Toast.LENGTH_SHORT).show();
-            loadPhotosFromDatabase(folderNameTextView.getText().toString());
         });
         builder.setNegativeButton("취소", (dialog, which) -> dialog.cancel());
 
